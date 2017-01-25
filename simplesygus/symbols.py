@@ -45,3 +45,7 @@ BV = {
     'bvslt'		: (lambda a, b: a < b),
     'bvredor'	: (lambda a: Not(a == BitVecVal(0, a.sort().size())))
 }
+
+# TODO
+def interpret_sort(*args):
+    pass
