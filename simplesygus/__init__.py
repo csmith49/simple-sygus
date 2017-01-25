@@ -1,6 +1,7 @@
 from .sexp import clean_string, parse_sexp
 from .scope import Scope
-from .sorts import interpret_sort
+from .grammar import Grammar
+from pta import Substitution, Term
 from . import symbols
 
 # this describes the problem to be solved --- the entire point of this module
@@ -9,20 +10,17 @@ class Problem(object):
         # don't ever make function defaults mutable
         if cmd_list is None:
             cmd_list = []
-        # our s_table is a map from ids to Scopes
-        self.symbol_table = {"init": Scope()}
-        self.global_id = "init"
+        # our symbol table is a scope object
+        self.symbol_table = Scope()
+        # we'll hold on to the 'structure' of the synth function
+        self.grammar = None
+        # as well as a list of constraints
+        self.constraints = []
+        # and optional arguments
+        self.options = {}
         # finally, step through the provided commands until we're done
         for cmd in cmd_list:
             self.update(cmd)
-    # helpers for moving global around
-    def globa_scope(self):
-        return self.symbol_table[self.global_id]
-    def update_global(self, fresh_scope):
-        fresh_id = "{old}->ugs".format(old=self.global_id)
-        fresh_global = self.global_scope() << fresh_scope
-        self.symbol_table[fresh_id] = fresh_global
-        self.global_id = fresh_id
     # method by which we process commands
     def update(self, cmd):
         # a little introspection never hurt nobody
@@ -33,13 +31,45 @@ class Problem(object):
             raise Exception()
     # methods to execute individual commands
     def _set_logic(self, logic):
+        # just pull the symbols for the appropriate theory
         functions = getattr(symbols, logic)
-        self.update_global(functions)
+        self.symbol_table << functions
     def _declare_var(self, variable, sort):
+        # interpret the sort string as an actual sort and construct a
+        # universally-quantified variable
         z3_var = Const(variable, symbols.interpret_sort(sort))
-        self.update_global( (variable, z3_var) )
+        self.symbol_table << (variable, z3_var)
     def _declare_fun(self, name, input_sorts, output_sort):
+        # convert the input sorts and the output sort into z3 sort objects
+        z3_inputs = list(map(symbols.interpret_sort, input_sorts))
+        z3_output = symbols.interpret_sort(output_sort)
+        # and then pull together an uninterpreted function
+        z3_unfun = Function(name, *(z3_inputs + [z3_output]))
+        self.symbol_table << (name, z3_unfun)
+    def _define_fun(self, name, inputs, output_sort, sexp):
+        # we'll turn the term/inputs combo into a function using substitutions
+        input_variables, input_sorts = zip(*inputs)
+        term = Term(sexp)
+        def f(*args):
+            sub = Substitution(zip(input_variables, args))
+            return self.evaluate(term @ sub)
+        self.symbol_table << (name, f)
+    def _synth_fun(self, name, inputs, output_sort, grammar_sexps):
+        input_variables, input_sorts = zip(*inputs)
+        self.grammar = Grammar(name, input_variables, grammar_sexps)
+        # note: at this point, you can't actually execute the synth fun
+        self.symbol_table << (name, symbols.uninterpreted)
+    def _constraint(self, sexp):
+        self.constraints.append(Term(sexp))
+    def _set_options(self, options):
+        for key, value in options:
+            self.options[key] = value
+    def _check_synth(self):
         pass
+    # of course, end of the day we need a way to convert our terms into things
+    def evaluate(self, term):
+        # TODO: doesn't handle constants
+        return term.cata(self.symbol_table)
 
 # finally, provide a mechanism by which to load problem files
 def load(filename):

@@ -5,3 +5,5 @@ Limitations:
 * Only one call to `check-synth`
 * Currently, only supports the theories `LIA` and `BV`
 * Allowed sorts are integers, booleans, and bit-vectors
+* No support for the GTerm macros in the language spec
+* Scope is flat --- if you're pulling tricks, an exception is thrown
