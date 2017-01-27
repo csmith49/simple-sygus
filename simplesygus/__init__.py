@@ -11,7 +11,7 @@ class Problem(object):
         if cmd_list is None:
             cmd_list = []
         # our symbol table is a scope object
-        self.symbol_table = Scope()
+        self.symbol_table = Scope() << symbols.CORE
         # we'll hold on to the 'structure' of the synth function
         self.grammar = None
         # as well as a list of constraints
@@ -28,24 +28,24 @@ class Problem(object):
         try:
             getattr(self, "_{f}".format(f=inst.replace('-', '_')))(*args)
         except AttributeError:
-            raise Exception()
+            raise Exception("{} not a recognized command".format(inst))
     # methods to execute individual commands
     def _set_logic(self, logic):
         # just pull the symbols for the appropriate theory
         functions = getattr(symbols, logic)
-        self.symbol_table << functions
+        self.symbol_table = self.symbol_table << functions
     def _declare_var(self, variable, sort):
         # interpret the sort string as an actual sort and construct a
         # universally-quantified variable
-        z3_var = Const(variable, symbols.interpret_sort(sort))
-        self.symbol_table << (variable, z3_var)
+        z3_var = symbols.make_variable(variable, sort)
+        self.symbol_table = self.symbol_table << (variable, z3_var)
     def _declare_fun(self, name, input_sorts, output_sort):
         # convert the input sorts and the output sort into z3 sort objects
         z3_inputs = list(map(symbols.interpret_sort, input_sorts))
         z3_output = symbols.interpret_sort(output_sort)
         # and then pull together an uninterpreted function
         z3_unfun = Function(name, *(z3_inputs + [z3_output]))
-        self.symbol_table << (name, z3_unfun)
+        self.symbol_table = self.symbol_table << (name, z3_unfun)
     def _define_fun(self, name, inputs, output_sort, sexp):
         # we'll turn the term/inputs combo into a function using substitutions
         input_variables, input_sorts = zip(*inputs)
@@ -53,12 +53,12 @@ class Problem(object):
         def f(*args):
             sub = Substitution(zip(input_variables, args))
             return self.evaluate(term @ sub)
-        self.symbol_table << (name, f)
+        self.symbol_table = self.symbol_table << (name, f)
     def _synth_fun(self, name, inputs, output_sort, grammar_sexps):
         input_variables, input_sorts = zip(*inputs)
         self.grammar = Grammar(name, input_variables, grammar_sexps)
         # note: at this point, you can't actually execute the synth fun
-        self.symbol_table << (name, symbols.uninterpreted)
+        self.symbol_table = self.symbol_table << (name, symbols.uninterpreted)
     def _constraint(self, sexp):
         self.constraints.append(Term(sexp))
     def _set_options(self, options):
@@ -68,8 +68,27 @@ class Problem(object):
         pass
     # of course, end of the day we need a way to convert our terms into things
     def evaluate(self, term):
-        # TODO: doesn't handle constants
-        return term.cata(self.symbol_table)
+        def valuation(t):
+            # if it's not a term, just push it through
+            if not isinstance(t, Term):
+                return lambda: t
+            # otherwise, handle the leaf case
+            if t.is_leaf():
+                # look for it in the symbol table
+                if t.value in self.symbol_table.keys():
+                    evaluated = self.symbol_table[t.value]
+                # or convert it into a constant/strip it of Term
+                else:
+                    try: evaluated = symbols.interpret_constant(t.value)
+                    except Exception as e:
+                        evaluated = t.value # just a catch-all, hope it works
+                return lambda: evaluated
+            # now evaluating functions
+            else:
+                f = self.symbol_table[t.value]
+                return lambda *args: f(*args)
+        # now just evaluate
+        return term.cata(valuation)
 
 # finally, provide a mechanism by which to load problem files
 def load(filename):

@@ -21,12 +21,12 @@ class Scope(dict):
         else:
             raise ScopeError("Forbidden namespace clash")
     # this is massive over-abuse of syntax, but we're just gonna go with it
-    def __rlshift__(self, other):
+    def __lshift__(self, other):
         # case 1: other is a tuple
         if isinstance(other, tuple):
             return self.extend(dict([other]))
         # case 2, 3: other is a dictionary, scope
-        elif isinstance(other, [dict, Scope]):
+        elif isinstance(other, (dict, Scope)):
             return self.extend(other)
         # eh, just throw back the original
         else:
