@@ -65,20 +65,20 @@ def interpret_sort(sexp):
 # and create constants
 def interpret_constant(value):
     # case 1: it's an integer
-    try: return Const(int(value), IntSort())
+    try: return int(value)
     except: pass
     # case 2: boolean?
-    if value == "true": return Const(True, BoolSort())
-    elif value == "false": return Const(False, BoolSort())
+    if value == "true": return True
+    elif value == "false": return False
     # case 3: bit-vectors
     elif value.startswith("#b"):
         bits = int(value[2:], 2)
         length = len(value) - 2
-        return Const(bits, BitVecSort(length))
+        return BitVecVal(bits, length)
     elif value.startswith("#x"):
         bits = int(value[2:], 16)
         length = (len(value) - 2) * 4
-        return Const(bits, BitVecSort(length))
+        return BitVecVal(bits, length)
     else:
         raise Exception("{} not a valid constant".format(value))
 
@@ -88,4 +88,11 @@ def make_variable(variable, sort):
 
 # we need to just AND somethings sometimes
 def conjoin(*args):
-    return And(args)
+    if len(args) == 1:
+        return args[0]
+    else:
+        return And(args)
+
+# because we have universal quantification
+def quantify(vars, phi):
+    return ForAll(vars, phi)

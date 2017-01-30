@@ -12,6 +12,8 @@ class Problem(object):
             cmd_list = []
         # our symbol table is a scope object
         self.symbol_table = Scope() << symbols.CORE
+        # to construct our constraints we need to capture variables
+        self.variables = []
         # we'll hold on to the 'structure' of the synth function
         self.grammar = None
         # as well as a list of constraints
@@ -38,6 +40,7 @@ class Problem(object):
         # interpret the sort string as an actual sort and construct a
         # universally-quantified variable
         z3_var = symbols.make_variable(variable, sort)
+        self.variables.append(z3_var)
         self.symbol_table = self.symbol_table << (variable, z3_var)
     def _declare_fun(self, name, input_sorts, output_sort):
         # convert the input sorts and the output sort into z3 sort objects
@@ -106,7 +109,7 @@ class Problem(object):
         self._register_synth_fun(term)
         constraint = symbols.conjoin(*list(map(self.evaluate, self.constraints)))
         self._unregister_synth_fun()
-        return constraint
+        return symbols.quantify(self.variables, constraint)
 
 # finally, provide a mechanism by which to load problem files
 def load(filename):

@@ -29,3 +29,5 @@ for term in terms:
 t = pta.Term(simplesygus.parse_sexp("(#x00000001)"))
 constraint = p.check_constraints(t)
 print("Constraint: {}".format(constraint))
+
+exit(0)
