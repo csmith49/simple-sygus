@@ -25,6 +25,7 @@ for term in terms:
     e = p.evaluate(t)
     print("\tEvaluated: {}".format(e))
 
-# t = pta.Term("hd01", "#x0000001")
-# print("Test term: {}".format(str(t)))
-# print("Evaluation: {}".format(p.evaluate(t)))
+# test some problem stuff
+t = pta.Term(simplesygus.parse_sexp("(#x00000001)"))
+constraint = p.check_constraints(t)
+print("Constraint: {}".format(constraint))

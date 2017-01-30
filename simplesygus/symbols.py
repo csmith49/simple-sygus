@@ -85,3 +85,7 @@ def interpret_constant(value):
 # construct a variable from a symbol and a sort -- avoids importing z3 in init
 def make_variable(variable, sort):
     return Const(variable, interpret_sort(sort))
+
+# we need to just AND somethings sometimes
+def conjoin(*args):
+    return And(args)

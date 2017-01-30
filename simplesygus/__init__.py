@@ -89,6 +89,24 @@ class Problem(object):
                 return lambda *args: f(*args)
         # now just evaluate
         return term.cata(valuation)
+    # we need to turn terms into actual functions
+    def _register_synth_fun(self, term):
+        sf_name = self.grammar.name
+        sf_inputs = self.grammar.input_variables
+        def f(*args):
+            sub = Substitution(zip(sf_inputs, args))
+            return self.evaluate(term @ sub)
+        self.symbol_table[sf_name] = f
+    # and maybe pull them out as well
+    def _unregister_synth_fun(self):
+        sf_name = self.grammar.name
+        self.symbol_table[sf_name] = symbols.uninterpreted
+    # evaluate each constraint wrt the new candidate, then join them together
+    def check_constraints(self, term):
+        self._register_synth_fun(term)
+        constraint = symbols.conjoin(*list(map(self.evaluate, self.constraints)))
+        self._unregister_synth_fun()
+        return constraint
 
 # finally, provide a mechanism by which to load problem files
 def load(filename):
