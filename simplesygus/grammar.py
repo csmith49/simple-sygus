@@ -1,11 +1,14 @@
 from pta import Term
+from . import sorts
 
 class Rule(object):
     def __init__(self, non_terminals, output, term):
         self.output = output
-        self._input_positions = term.filter(lambda t: t.value in non_terminals)
+        self._input_positions = term.filter(lambda t: t.value in non_terminals.keys())
         self.inputs = list(map(lambda p: (term | p).value, self._input_positions))
         self.term = term
+        self.output_sort = non_terminals[output]
+        self.input_sorts = list(map(lambda i: non_terminals[i], self.inputs))
     def evaluate(self, *args):
         output = self.term
         for arg, pos in zip(args, self._input_positions):
@@ -21,7 +24,8 @@ class Grammar(object):
         # we first need to find the non-terms
         self.name = name
         self.input_variables = input_variables
-        self.non_terminals, _, _ = zip(*sexps)
+        nts, sort_sexprs, _ = zip(*sexps)
+        self.non_terminals = dict(zip(nts, map(lambda s: sorts.parse_sort(s), sort_sexprs)))
         self.rules = []
         for output, _, productions in sexps:
             for prod in productions:

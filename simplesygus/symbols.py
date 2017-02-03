@@ -1,54 +1,66 @@
 from z3 import *
+from .sorts import Sorts
+
+class Symbol(object):
+    def __init__(self, f, output):
+        self.f = f
+        self.output_sort = output
+    def __call__(self, *args):
+        try:
+            return self.f(*args)
+        except TypeError:
+            return self.f
 
 CORE = {
-    "="         : (lambda a, b: a == b),
-    'ite'		: If,
-	'and'		: And,
-	'or'		: Or,
-	'not'		: Not,
-	'xor'		: Xor,
-    '=>'		: Implies,
-    '_ID'		: (lambda a: a)
+    "="         : Symbol(lambda a, b: a == b, Sorts.NA),
+    'ite'		: Symbol(If, Sorts.NA),
+	'and'		: Symbol(And, Sorts.BOOL),
+	'or'		: Symbol(Or, Sorts.BOOL),
+	'not'		: Symbol(Not, Sorts.BOOL),
+	'xor'		: Symbol(Xor, Sorts.BOOL),
+    '=>'		: Symbol(Implies, Sorts.BOOL)
 }
 
 LIA = {
-    '+'			: (lambda a, b: a + b),
-	'-'			: (lambda a, b: a - b),
-	'*'			: (lambda a, b: a * b),
-    '<='		: (lambda a, b: a <= b),
-	'>='		: (lambda a, b: a >= b),
-	'>'			: (lambda a, b: a > b),
-	'<'			: (lambda a, b: a < b)
+    '+'			: Symbol(lambda a, b: a + b, Sorts.INT),
+	'-'			: Symbol(lambda a, b: a - b, Sorts.INT),
+	'*'			: Symbol(lambda a, b: a * b, Sorts.INT),
+    '<='		: Symbol(lambda a, b: a <= b, Sorts.BOOL),
+	'>='		: Symbol(lambda a, b: a >= b, Sorts.BOOL),
+	'>'			: Symbol(lambda a, b: a > b, Sorts.BOOL),
+	'<'			: Symbol(lambda a, b: a < b, Sorts.BOOL)
 }
 
 BV = {
-    'bvand'		: (lambda a, b: a & b),
-    'bvor'		: (lambda a, b: a | b),
-    'bvxor'		: (lambda a, b: a ^ b),
-    'bvadd'		: (lambda a, b: a + b),
-    'bvsub'		: (lambda a, b: a - b),
-    'bvmul'		: (lambda a, b: a * b),
-    'bvudiv'	: UDiv,
-    'bvurem'	: URem,
-    'bvlshr'	: LShR,
-    'bvashr'	: (lambda a, b: a >> b),
-    'bvshl'		: (lambda a, b: a << b),
-    'bvsdiv'	: (lambda a, b: a / b),
-    'bvsrem'	: SRem,
-    'bvneg'		: (lambda a: -a),
-    'bvnot'		: (lambda a: ~a),
-    'bvugt'		: UGT,
-    'bvuge'		: UGE,
-    'bvule'		: ULE,
-    'bvsle'		: (lambda a, b: a <= b),
-    'bvult'		: ULT,
-    'bvslt'		: (lambda a, b: a < b),
-    'bvredor'	: (lambda a: Not(a == BitVecVal(0, a.sort().size())))
+    'bvand'		: Symbol(lambda a, b: a & b, Sorts.BV),
+    'bvor'		: Symbol(lambda a, b: a | b, Sorts.BV),
+    'bvxor'		: Symbol(lambda a, b: a ^ b, Sorts.BV),
+    'bvadd'		: Symbol(lambda a, b: a + b, Sorts.BV),
+    'bvsub'		: Symbol(lambda a, b: a - b, Sorts.BV),
+    'bvmul'		: Symbol(lambda a, b: a * b, Sorts.BV),
+    'bvudiv'	: Symbol(UDiv, Sorts.BV),
+    'bvurem'	: Symbol(URem, Sorts.BV),
+    'bvlshr'	: Symbol(LShR, Sorts.BV),
+    'bvashr'	: Symbol(lambda a, b: a >> b, Sorts.BV),
+    'bvshl'		: Symbol(lambda a, b: a << b, Sorts.BV),
+    'bvsdiv'	: Symbol(lambda a, b: a / b, Sorts.BV),
+    'bvsrem'	: Symbol(SRem, Sorts.BV),
+    'bvneg'		: Symbol(lambda a: -a, Sorts.BOOL),
+    'bvnot'		: Symbol(lambda a: ~a, Sorts.BOOL),
+    'bvugt'		: Symbol(UGT, Sorts.BOOL),
+    'bvuge'		: Symbol(UGE, Sorts.BOOL),
+    'bvule'		: Symbol(ULE, Sorts.BOOL),
+    'bvsle'		: Symbol(lambda a, b: a <= b, Sorts.BOOL),
+    'bvult'		: Symbol(ULT, Sorts.BOOL),
+    'bvslt'		: Symbol(lambda a, b: a < b, Sorts.BOOL),
+    'bvredor'	: Symbol(lambda a: Not(a == BitVecVal(0, a.sort().size())), Sorts.BOOL)
 }
 
 # just to make sure we don't try to use the synth fun before it's defined
-def uninterpreted(*args):
+def bad(*args):
     raise Exception
+
+uninterpreted = Symbol(bad, Sorts.NA)
 
 # convert sexp sorts into z3 sorts
 def interpret_sort(sexp):

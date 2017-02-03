@@ -41,14 +41,14 @@ class Problem(object):
         # universally-quantified variable
         z3_var = symbols.make_variable(variable, sort)
         self.variables.append(z3_var)
-        self.symbol_table = self.symbol_table << (variable, z3_var)
+        self.symbol_table = self.symbol_table << (variable, symbols.Symbol(z3_var, sort))
     def _declare_fun(self, name, input_sorts, output_sort):
         # convert the input sorts and the output sort into z3 sort objects
         z3_inputs = list(map(symbols.interpret_sort, input_sorts))
         z3_output = symbols.interpret_sort(output_sort)
         # and then pull together an uninterpreted function
         z3_unfun = Function(name, *(z3_inputs + [z3_output]))
-        self.symbol_table = self.symbol_table << (name, z3_unfun)
+        self.symbol_table = self.symbol_table << (name, symbols.Symbol(z3_unfun, output_sort))
     def _define_fun(self, name, inputs, output_sort, sexp):
         # we'll turn the term/inputs combo into a function using substitutions
         input_variables, input_sorts = zip(*inputs)
@@ -56,7 +56,7 @@ class Problem(object):
         def f(*args):
             sub = Substitution(zip(input_variables, args))
             return self.evaluate(term @ sub)
-        self.symbol_table = self.symbol_table << (name, f)
+        self.symbol_table = self.symbol_table << (name, symbols.Symbol(f, output_sort))
     def _synth_fun(self, name, inputs, output_sort, grammar_sexps):
         input_variables, input_sorts = zip(*inputs)
         self.grammar = Grammar(name, input_variables, grammar_sexps)
@@ -79,7 +79,7 @@ class Problem(object):
             if t.is_leaf():
                 # look for it in the symbol table
                 if t.value in self.symbol_table.keys():
-                    evaluated = self.symbol_table[t.value]
+                    evaluated = self.symbol_table[t.value]()
                 # or convert it into a constant/strip it of Term
                 else:
                     try: evaluated = symbols.interpret_constant(t.value)
@@ -99,7 +99,7 @@ class Problem(object):
         def f(*args):
             sub = Substitution(zip(sf_inputs, args))
             return self.evaluate(term @ sub)
-        self.symbol_table[sf_name] = f
+        self.symbol_table[sf_name] = symbols.Symbol(f, self.grammar.non_terminals["Start"])
     # and maybe pull them out as well
     def _unregister_synth_fun(self):
         sf_name = self.grammar.name
