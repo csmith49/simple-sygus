@@ -110,6 +110,12 @@ class Problem(object):
         constraint = symbols.conjoin(*list(map(self.evaluate, self.constraints)))
         self._unregister_synth_fun()
         return symbols.quantify(self.variables, constraint)
+    def check_sat(self, term):
+        return symbols.check_sat(self.check_constraints(term))
+        constraint = self.check_constraints(term)
+        s = Solver()
+        s.add(constraint)
+        return sat == s.check()
 
 # finally, provide a mechanism by which to load problem files
 def load(filename):

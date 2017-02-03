@@ -18,6 +18,8 @@ class Rule(object):
         return "{hd} -> {bdy}".format(hd=str(self.output), bdy=str(self.term))
     def __repr__(self):
         return str(self)
+    def __call__(self, *args):
+        return self.evaluate(*args)
 
 class Grammar(object):
     def __init__(self, name, input_variables, sexps):
@@ -40,3 +42,5 @@ class Grammar(object):
     def __repr__(self):
         return str(self)
     # TODO: add some utilities for expanding terms in the grammar
+    def start_rules(self):
+        return list(filter(lambda r: r.output == "Start", self.rules))

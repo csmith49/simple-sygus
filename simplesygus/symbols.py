@@ -108,3 +108,9 @@ def conjoin(*args):
 # because we have universal quantification
 def quantify(vars, phi):
     return ForAll(vars, phi)
+
+# and wrap a quick z3 call
+def check_sat(formula):
+    s = Solver()
+    s.add(formula)
+    return sat == s.check()
